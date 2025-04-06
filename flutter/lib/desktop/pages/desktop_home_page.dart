@@ -100,11 +100,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         "https://test.hzhexia.com/uop/backend/remote/app/generateQrcode",
         data: {
           "appVersion": "1.0.0",
-          "customField": "",
-          // "customField": JSON.stringify({
-          //   "id": id,
-          //   "password": handler.temporary_password(),
-          // }),
+          "customField": jsonEncode({
+            "id": id,
+            "password": pw,
+          }),
           "mac": "00:1B:44:11:3A:B7",
           "sn": "1234567890",
         },
@@ -137,7 +136,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           r2.then((value) {
             var code = value.data['code'];
             if (code == 400) {
-              fetchQRCode();
+              fetchQRCode(id, pw);
             } else if (code != 407) {
               _timer?.cancel();
             }
@@ -146,7 +145,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           });
         });
       } else {
-        fetchQRCode();
+        fetchQRCode(id, pw);
       }
     } catch (e) {
       debugPrint(e.toString());
@@ -827,7 +826,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   void initState() {
     super.initState();
-    fetchQRCode("", "0");
+    Timer? tt;
+    tt = Timer(const Duration(seconds: 1), () {
+      var model = gFFI.serverModel;
+      if (model.serverId.text.isNotEmpty &&
+          model.serverPasswd.text.isNotEmpty) {
+        fetchQRCode(model.serverId.text, model.serverPasswd.text);
+        tt?.cancel();
+      }
+    });
+
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();
       final error = await bind.mainGetError();
