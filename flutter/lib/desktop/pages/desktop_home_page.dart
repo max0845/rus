@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
@@ -19,6 +21,7 @@ import 'package:flutter_hbb/plugin/ui_manager.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
@@ -52,24 +55,102 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
+  final RxString _qrcode = ''.obs;
+  final RxString _qrcodeID = ''.obs;
+  final RxString _message = ''.obs;
+  Timer? _timer;
 
   final GlobalKey _childKey = GlobalKey();
+  final Dio _dio = Dio()
+    ..httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () => HttpClient()
+        ..badCertificateCallback =
+            (X509Certificate cert, String host, int port) => true,
+    );
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isIncomingOnly = bind.isIncomingOnly();
+    //final isIncomingOnly = bind.isIncomingOnly();
     return _buildBlock(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text("test").marginOnly(top: 10),
+          Image.asset('assets/logo.png', width: 200, height: 200),
+          Obx(
+            () => _qrcode.value.isNotEmpty
+                ? QrImageView(
+                    data: _qrcode.value,
+                    version: QrVersions.auto,
+                    size: 200.0,
+                  )
+                : const SizedBox(),
+          ),
           //buildLeftPane(context),
           //if (!isIncomingOnly) const VerticalDivider(width: 1),
           //if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
         ],
       ),
     );
+  }
+
+  Future<void> fetchQRCode(String id, String pw) async {
+    try {
+      final response = await _dio.request(
+        "https://test.hzhexia.com/uop/backend/remote/app/generateQrcode",
+        data: {
+          "appVersion": "1.0.0",
+          "customField": "",
+          // "customField": JSON.stringify({
+          //   "id": id,
+          //   "password": handler.temporary_password(),
+          // }),
+          "mac": "00:1B:44:11:3A:B7",
+          "sn": "1234567890",
+        },
+        options: Options(
+          method: "POST",
+          headers: {
+            Headers.contentTypeHeader: 'application/json;charset=utf-8',
+            Headers.acceptHeader: '*/*',
+          },
+        ),
+      );
+      _qrcode.value = response.data['data']['qrcode'];
+      _qrcodeID.value = response.data['data']['qrcodeId'];
+      _message.value = response.data['message'];
+
+      if (_message.value == "OK") {
+        _timer?.cancel();
+        _timer = Timer(const Duration(seconds: 4), () {
+          final r2 = _dio.request(
+            "https://test.hzhexia.com/uop/backend/remote/app/bindStatusQuery",
+            data: {"appVersion": "1.0.0", "qrcodeId": _qrcodeID.value},
+            options: Options(
+              method: "POST",
+              headers: {
+                Headers.contentTypeHeader: 'application/json;charset=utf-8',
+                Headers.acceptHeader: '*/*',
+              },
+            ),
+          );
+          r2.then((value) {
+            var code = value.data['code'];
+            if (code == 400) {
+              fetchQRCode();
+            } else if (code != 407) {
+              _timer?.cancel();
+            }
+          }).catchError((e) {
+            debugPrint(e.toString());
+          });
+        });
+      } else {
+        fetchQRCode();
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -154,22 +235,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     child: Obx(
                       () => Icon(
                         Icons.settings,
-                        color:
-                            _editHover.value
-                                ? textColor
-                                : Colors.grey.withOpacity(0.5),
+                        color: _editHover.value
+                            ? textColor
+                            : Colors.grey.withOpacity(0.5),
                         size: 22,
                       ),
                     ),
-                    onTap:
-                        () => {
-                          if (DesktopSettingPage.tabKeys.isNotEmpty)
-                            {
-                              DesktopSettingPage.switch2page(
-                                DesktopSettingPage.tabKeys[0],
-                              ),
-                            },
+                    onTap: () => {
+                      if (DesktopSettingPage.tabKeys.isNotEmpty)
+                        {
+                          DesktopSettingPage.switch2page(
+                            DesktopSettingPage.tabKeys[0],
+                          ),
                         },
+                    },
                     onHover: (value) => _editHover.value = value,
                   ),
                 ),
@@ -233,19 +312,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         );
                         showToast(translate("Copied"));
                       },
-                      child:
-                          TextFormField(
-                            controller: model.serverId,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.only(
-                                top: 10,
-                                bottom: 10,
-                              ),
-                            ),
-                            style: TextStyle(fontSize: 22),
-                          ).workaroundFreezeLinuxMint(),
+                      child: TextFormField(
+                        controller: model.serverId,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.only(
+                            top: 10,
+                            bottom: 10,
+                          ),
+                        ),
+                        style: TextStyle(fontSize: 22),
+                      ).workaroundFreezeLinuxMint(),
                     ),
                   ),
                 ],
@@ -267,10 +345,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: Obx(
           () => CircleAvatar(
             radius: 15,
-            backgroundColor:
-                hover.value
-                    ? Theme.of(context).scaffoldBackgroundColor
-                    : Theme.of(context).colorScheme.background,
+            backgroundColor: hover.value
+                ? Theme.of(context).scaffoldBackgroundColor
+                : Theme.of(context).colorScheme.background,
             child: Icon(
               Icons.more_vert_outlined,
               size: 20,
@@ -298,8 +375,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     RxBool refreshHover = false.obs;
     RxBool editHover = false.obs;
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    final showOneTime =
-        model.approveMode != 'click' &&
+    final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
       margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
@@ -338,19 +414,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                               showToast(translate("Copied"));
                             }
                           },
-                          child:
-                              TextFormField(
-                                controller: model.serverPasswd,
-                                readOnly: true,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.only(
-                                    top: 14,
-                                    bottom: 10,
-                                  ),
-                                ),
-                                style: TextStyle(fontSize: 15),
-                              ).workaroundFreezeLinuxMint(),
+                          child: TextFormField(
+                            controller: model.serverPasswd,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.only(
+                                top: 14,
+                                bottom: 10,
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 15),
+                          ).workaroundFreezeLinuxMint(),
                         ),
                       ),
                       if (showOneTime)
@@ -363,10 +438,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 quarterTurns: 2,
                                 child: Icon(
                                   Icons.refresh,
-                                  color:
-                                      refreshHover.value
-                                          ? textColor
-                                          : Color(0xFFDDDDDD),
+                                  color: refreshHover.value
+                                      ? textColor
+                                      : Color(0xFFDDDDDD),
                                   size: 22,
                                 ),
                               ),
@@ -381,18 +455,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             child: Obx(
                               () => Icon(
                                 Icons.edit,
-                                color:
-                                    editHover.value
-                                        ? textColor
-                                        : Color(0xFFDDDDDD),
+                                color: editHover.value
+                                    ? textColor
+                                    : Color(0xFFDDDDDD),
                                 size: 22,
                               ).marginOnly(right: 8, top: 4),
                             ),
                           ),
-                          onTap:
-                              () => DesktopSettingPage.switch2page(
-                                SettingsTabKey.safety,
-                              ),
+                          onTap: () => DesktopSettingPage.switch2page(
+                            SettingsTabKey.safety,
+                          ),
                           onHover: (value) => editHover.value = value,
                         ),
                     ],
@@ -672,20 +744,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children:
-                  (title.isNotEmpty
+              children: (title.isNotEmpty
                       ? <Widget>[
-                        Center(
-                          child: Text(
-                            translate(title),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ).marginOnly(bottom: 6),
-                        ),
-                      ]
+                          Center(
+                            child: Text(
+                              translate(title),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ).marginOnly(bottom: 6),
+                          ),
+                        ]
                       : <Widget>[]) +
                   <Widget>[
                     if (content.isNotEmpty)
@@ -701,41 +772,41 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   ] +
                   (btnText.isNotEmpty
                       ? <Widget>[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            FixedWidthButton(
-                              width: 150,
-                              padding: 8,
-                              isOutline: true,
-                              text: translate(btnText),
-                              textColor: Colors.white,
-                              borderColor: Colors.white,
-                              textSize: 20,
-                              radius: 10,
-                              onTap: onPressed,
-                            ),
-                          ],
-                        ),
-                      ]
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              FixedWidthButton(
+                                width: 150,
+                                padding: 8,
+                                isOutline: true,
+                                text: translate(btnText),
+                                textColor: Colors.white,
+                                borderColor: Colors.white,
+                                textSize: 20,
+                                radius: 10,
+                                onTap: onPressed,
+                              ),
+                            ],
+                          ),
+                        ]
                       : <Widget>[]) +
                   (help != null
                       ? <Widget>[
-                        Center(
-                          child: InkWell(
-                            onTap:
-                                () async => await launchUrl(Uri.parse(link!)),
-                            child: Text(
-                              translate(help),
-                              style: TextStyle(
-                                decoration: TextDecoration.underline,
-                                color: Colors.white,
-                                fontSize: 12,
+                          Center(
+                            child: InkWell(
+                              onTap: () async =>
+                                  await launchUrl(Uri.parse(link!)),
+                              child: Text(
+                                translate(help),
+                                style: TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ).marginOnly(top: 6),
-                        ),
-                      ]
+                            ).marginOnly(top: 6),
+                          ),
+                        ]
                       : <Widget>[]),
             ),
           ),
@@ -756,6 +827,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   void initState() {
     super.initState();
+    fetchQRCode("", "0");
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();
       final error = await bind.mainGetError();
@@ -809,20 +881,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     rustDeskWinManager.registerActiveWindowListener(onActiveWindowChanged);
 
     screenToMap(window_size.Screen screen) => {
-      'frame': {
-        'l': screen.frame.left,
-        't': screen.frame.top,
-        'r': screen.frame.right,
-        'b': screen.frame.bottom,
-      },
-      'visibleFrame': {
-        'l': screen.visibleFrame.left,
-        't': screen.visibleFrame.top,
-        'r': screen.visibleFrame.right,
-        'b': screen.visibleFrame.bottom,
-      },
-      'scaleFactor': screen.scaleFactor,
-    };
+          'frame': {
+            'l': screen.frame.left,
+            't': screen.frame.top,
+            'r': screen.frame.right,
+            'b': screen.frame.bottom,
+          },
+          'visibleFrame': {
+            'l': screen.visibleFrame.left,
+            't': screen.visibleFrame.top,
+            'r': screen.visibleFrame.right,
+            'b': screen.visibleFrame.bottom,
+          },
+          'scaleFactor': screen.scaleFactor,
+        };
 
     rustDeskWinManager.setMethodHandler((call, fromWindowId) async {
       debugPrint(
@@ -1020,23 +1092,22 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
             Row(
               children: [
                 Expanded(
-                  child:
-                      TextField(
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: translate('Password'),
-                          errorText: errMsg0.isNotEmpty ? errMsg0 : null,
-                        ),
-                        controller: p0,
-                        autofocus: true,
-                        onChanged: (value) {
-                          rxPass.value = value.trim();
-                          setState(() {
-                            errMsg0 = '';
-                          });
-                        },
-                        maxLength: maxLength,
-                      ).workaroundFreezeLinuxMint(),
+                  child: TextField(
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: translate('Password'),
+                      errorText: errMsg0.isNotEmpty ? errMsg0 : null,
+                    ),
+                    controller: p0,
+                    autofocus: true,
+                    onChanged: (value) {
+                      rxPass.value = value.trim();
+                      setState(() {
+                        errMsg0 = '';
+                      });
+                    },
+                    maxLength: maxLength,
+                  ).workaroundFreezeLinuxMint(),
                 ),
               ],
             ),
@@ -1049,21 +1120,20 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
             Row(
               children: [
                 Expanded(
-                  child:
-                      TextField(
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: translate('Confirmation'),
-                          errorText: errMsg1.isNotEmpty ? errMsg1 : null,
-                        ),
-                        controller: p1,
-                        onChanged: (value) {
-                          setState(() {
-                            errMsg1 = '';
-                          });
-                        },
-                        maxLength: maxLength,
-                      ).workaroundFreezeLinuxMint(),
+                  child: TextField(
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: translate('Confirmation'),
+                      errorText: errMsg1.isNotEmpty ? errMsg1 : null,
+                    ),
+                    controller: p1,
+                    onChanged: (value) {
+                      setState(() {
+                        errMsg1 = '';
+                      });
+                    },
+                    maxLength: maxLength,
+                  ).workaroundFreezeLinuxMint(),
                 ),
               ],
             ),
@@ -1072,25 +1142,22 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
               () => Wrap(
                 runSpacing: 8,
                 spacing: 4,
-                children:
-                    rules.map((e) {
-                      var checked = e.validate(rxPass.value.trim());
-                      return Chip(
-                        label: Text(
-                          e.name,
-                          style: TextStyle(
-                            color:
-                                checked
-                                    ? const Color(0xFF0A9471)
-                                    : Color.fromARGB(255, 198, 86, 157),
-                          ),
-                        ),
-                        backgroundColor:
-                            checked
-                                ? const Color(0xFFD0F7ED)
-                                : Color.fromARGB(255, 247, 205, 232),
-                      );
-                    }).toList(),
+                children: rules.map((e) {
+                  var checked = e.validate(rxPass.value.trim());
+                  return Chip(
+                    label: Text(
+                      e.name,
+                      style: TextStyle(
+                        color: checked
+                            ? const Color(0xFF0A9471)
+                            : Color.fromARGB(255, 198, 86, 157),
+                      ),
+                    ),
+                    backgroundColor: checked
+                        ? const Color(0xFFD0F7ED)
+                        : Color.fromARGB(255, 247, 205, 232),
+                  );
+                }).toList(),
               ),
             ),
           ],
