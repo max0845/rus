@@ -20,6 +20,7 @@ import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/plugin/ui_manager.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -53,12 +54,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Timer? _updateTimer;
   bool isCardClosed = false;
 
+  final box = GetStorage();
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
   final RxString _qrcode = ''.obs;
   final RxString _qrcodeID = ''.obs;
   final RxString _message = ''.obs;
   Timer? _timer;
+  final RxString _token = ''.obs;
+  final RxString _orgId = ''.obs;
+  final RxString _orgNo = ''.obs;
+  final RxString _orgName = ''.obs;
+  final RxString _clientNo = ''.obs;
+  final RxString _location = ''.obs;
+  final RxString _id = ''.obs;
+  final RxString _pw = ''.obs;
 
   final GlobalKey _childKey = GlobalKey();
   final Dio _dio = Dio()
@@ -72,11 +82,26 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     //final isIncomingOnly = bind.isIncomingOnly();
+    const TextStyle style = TextStyle(
+      fontSize: 14,
+      color: Colors.black,
+      decoration: TextDecoration.none,
+    );
     return _buildBlock(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset('assets/logo.png', width: 200, height: 200),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black, width: 1),
+            ),
+            child: Image.asset(
+              'images/logo.png',
+              width: 200,
+              height: 200,
+            ).marginOnly(left: 20),
+          ),
+          const SizedBox(height: 20),
           Obx(
             () => _qrcode.value.isNotEmpty
                 ? QrImageView(
@@ -85,7 +110,50 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     size: 200.0,
                   )
                 : const SizedBox(),
-          ),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("门店Id: ${_orgId.value}", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("门店编号: ${_orgNo.value}", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("门店名称: ${_orgName.value}", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("clientNo: ${_clientNo.value}", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("位置描述: ${_location.value}", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("id: ", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+          const SizedBox(height: 5),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? Text("pw: ", style: style)
+                : const SizedBox(),
+          ).marginOnly(left: 30),
+
           //buildLeftPane(context),
           //if (!isIncomingOnly) const VerticalDivider(width: 1),
           //if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
@@ -139,6 +207,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               fetchQRCode(id, pw);
             } else if (code != 407) {
               _timer?.cancel();
+              _qrcode.value = "";
+              _token.value = value.data['data']['token'];
+              _orgId.value = (value.data['data']['orgId']).toString();
+              _orgNo.value = value.data['data']['orgNo'];
+              _orgName.value = value.data['data']['orgName'];
+              _clientNo.value = value.data['data']['clientNo'];
+              _location.value = value.data['data']['location'];
+              var model = gFFI.serverModel;
+              _id.value = model.serverId.text;
+              _pw.value = model.serverPasswd.text;
             }
           }).catchError((e) {
             debugPrint(e.toString());
@@ -826,15 +904,24 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   void initState() {
     super.initState();
-    Timer? tt;
-    tt = Timer(const Duration(seconds: 1), () {
+
+    _token.value = box.read('token') ?? "";
+    if (_token.value.isNotEmpty) {
+      _orgId.value = box.read('orgId') ?? "";
+      _orgNo.value = box.read('orgNo') ?? "";
+      _orgName.value = box.read('orgName') ?? "";
+      _clientNo.value = box.read('clientNo') ?? "";
+      _location.value = box.read('location') ?? "";
+      var model = gFFI.serverModel;
+      _id.value = model.serverId.text;
+      _pw.value = model.serverPasswd.text;
+    } else {
       var model = gFFI.serverModel;
       if (model.serverId.text.isNotEmpty &&
           model.serverPasswd.text.isNotEmpty) {
         fetchQRCode(model.serverId.text, model.serverPasswd.text);
-        tt?.cancel();
       }
-    });
+    }
 
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();
