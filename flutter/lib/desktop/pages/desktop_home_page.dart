@@ -96,7 +96,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               border: Border.all(color: Colors.black, width: 1),
             ),
             child: Image.asset(
-              'images/logo.png',
+              'assets/logo.png',
               width: 200,
               height: 200,
             ).marginOnly(left: 20),
@@ -189,7 +189,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
       if (_message.value == "OK") {
         _timer?.cancel();
-        _timer = Timer(const Duration(seconds: 4), () {
+        _timer = Timer.periodic(const Duration(seconds: 1), (_) {
           final r2 = _dio.request(
             "https://test.hzhexia.com/uop/backend/remote/app/bindStatusQuery",
             data: {"appVersion": "1.0.0", "qrcodeId": _qrcodeID.value},
