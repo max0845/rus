@@ -88,13 +88,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       decoration: TextDecoration.none,
     );
     return _buildBlock(
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black, width: 1),
-            ),
             child: Image.asset(
               'assets/logo.png',
               width: 200,
@@ -214,9 +211,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               _orgName.value = value.data['data']['orgName'];
               _clientNo.value = value.data['data']['clientNo'];
               _location.value = value.data['data']['location'];
-              var model = gFFI.serverModel;
-              _id.value = model.serverId.text;
-              _pw.value = model.serverPasswd.text;
+              _id.value = id;
+              _pw.value = pw;
             }
           }).catchError((e) {
             debugPrint(e.toString());
