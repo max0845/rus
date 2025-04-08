@@ -480,7 +480,7 @@ class ServerModel with ChangeNotifier {
 
   Future<List<String>> getInfo() async {
     return await Future.wait(
-        [bind.mainUpdateTemporaryPassword(), bind.mainGetMyId()]);
+        [bind.mainGetTemporaryPassword(), bind.mainGetMyId()]);
   }
 
   changeStatue(String name, bool value) {
