@@ -141,13 +141,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
-                ? Text("id: ", style: style)
+                ? Text("id: ${_id.value}", style: style)
                 : const SizedBox(),
           ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
-                ? Text("pw: ", style: style)
+                ? Text("pw: ${_pw.value}", style: style)
                 : const SizedBox(),
           ).marginOnly(left: 50),
           const SizedBox(height: 35),
