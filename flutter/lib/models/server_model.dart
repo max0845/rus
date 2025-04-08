@@ -478,6 +478,11 @@ class ServerModel with ChangeNotifier {
     }
   }
 
+  Future<List<String>> getInfo() async {
+    return await Future.wait(
+        [bind.mainUpdateTemporaryPassword(), bind.mainGetMyId()]);
+  }
+
   changeStatue(String name, bool value) {
     debugPrint("changeStatue value $value");
     switch (name) {
@@ -817,8 +822,8 @@ class Client {
 
   RxInt unreadChatMessageCount = 0.obs;
 
-  Client(this.id, this.authorized, this.isFileTransfer, this.isViewCamera, this.name, this.peerId,
-      this.keyboard, this.clipboard, this.audio);
+  Client(this.id, this.authorized, this.isFileTransfer, this.isViewCamera,
+      this.name, this.peerId, this.keyboard, this.clipboard, this.audio);
 
   Client.fromJson(Map<String, dynamic> json) {
     id = json['id'];

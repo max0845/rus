@@ -107,56 +107,115 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     size: 200.0,
                   )
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("门店Id: ${_orgId.value}", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("门店编号: ${_orgNo.value}", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("门店名称: ${_orgName.value}", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("clientNo: ${_clientNo.value}", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("位置描述: ${_location.value}", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("id: ", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
+          ).marginOnly(left: 50),
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
                 ? Text("pw: ", style: style)
                 : const SizedBox(),
-          ).marginOnly(left: 30),
-
+          ).marginOnly(left: 50),
+          const SizedBox(height: 35),
+          _token.value.isNotEmpty
+              ? OutlinedButton(
+                  onPressed: () {
+                    canaelBind();
+                  },
+                  style: ButtonStyle(
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  child: const Text(
+                    "解绑",
+                    style: TextStyle(fontSize: 14, color: Colors.black),
+                  ),
+                ).marginOnly(left: 50)
+              : const SizedBox(),
+          const SizedBox(height: 5),
           //buildLeftPane(context),
           //if (!isIncomingOnly) const VerticalDivider(width: 1),
           //if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
         ],
       ),
     );
+  }
+
+  bool busy = false;
+
+  canaelBind() async {
+    if (busy) {
+      return;
+    }
+    busy = true;
+    await _dio.request(
+      "https://test.hzhexia.com/uop/backend/remote/app/clientUnbind",
+      data: {"clientNo": _clientNo.value},
+      options: Options(
+        method: "POST",
+        headers: {
+          Headers.contentTypeHeader: 'application/json;charset=utf-8',
+          Headers.acceptHeader: '*/*',
+        },
+      ),
+    );
+    _qrcode.value = "";
+    _token.value = "";
+    _orgId.value = "";
+    _orgNo.value = "";
+    _orgName.value = "";
+    _clientNo.value = "";
+    _location.value = "";
+
+    box.remove('token');
+    box.remove('orgId');
+    box.remove('orgNo');
+    box.remove('orgName');
+    box.remove('clientNo');
+    box.remove('location');
+
+    var model = gFFI.serverModel;
+    model.getInfo().then((v) {
+      fetchQRCode(v[1], v[0]);
+    });
+    busy = false;
   }
 
   Future<void> fetchQRCode(String id, String pw) async {
@@ -909,14 +968,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       _clientNo.value = box.read('clientNo') ?? "";
       _location.value = box.read('location') ?? "";
       var model = gFFI.serverModel;
-      _id.value = model.serverId.text;
-      _pw.value = model.serverPasswd.text;
+      model.getInfo().then((v) {
+        _id.value = v[1];
+        _pw.value = v[0];
+      });
     } else {
       var model = gFFI.serverModel;
-      if (model.serverId.text.isNotEmpty &&
-          model.serverPasswd.text.isNotEmpty) {
-        fetchQRCode(model.serverId.text, model.serverPasswd.text);
-      }
+      model.getInfo().then((v) {
+        fetchQRCode(v[1], v[0]);
+      });
     }
 
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
