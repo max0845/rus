@@ -151,24 +151,26 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 : const SizedBox(),
           ).marginOnly(left: 50),
           const SizedBox(height: 35),
-          _token.value.isNotEmpty
-              ? OutlinedButton(
-                  onPressed: () {
-                    canaelBind();
-                  },
-                  style: ButtonStyle(
-                    shape: MaterialStateProperty.all(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+          Obx(
+            () => _token.value.isNotEmpty
+                ? OutlinedButton(
+                    onPressed: () {
+                      canaelBind();
+                    },
+                    style: ButtonStyle(
+                      shape: MaterialStateProperty.all(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
-                  ),
-                  child: const Text(
-                    "解绑",
-                    style: TextStyle(fontSize: 14, color: Colors.black),
-                  ),
-                ).marginOnly(left: 50)
-              : const SizedBox(),
+                    child: const Text(
+                      "解绑",
+                      style: TextStyle(fontSize: 14, color: Colors.black),
+                    ),
+                  ).marginOnly(left: 50)
+                : const SizedBox(),
+          ),
           const SizedBox(height: 5),
           //buildLeftPane(context),
           //if (!isIncomingOnly) const VerticalDivider(width: 1),
