@@ -2117,11 +2117,6 @@ jobs:
           yarn install && yarn build
           popd
 
-          pushd flutter/web
-         # wget https://github.com/rustdesk/doc.rustdesk.com/releases/download/console/web_deps.tar.gz
-         # tar xzf web_deps.tar.gz
-          popd
-
           pushd flutter
           flutter build web --release
           cd build
