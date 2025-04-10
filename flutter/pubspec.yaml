@@ -108,6 +108,7 @@ dependencies:
   extended_text: 14.0.0
   dio: ^5.2.0
   get_storage: ^2.1.1
+  flutter_switch: ^0.3.2
 
 dev_dependencies:
   icons_launcher: ^2.0.4

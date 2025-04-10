@@ -19,6 +19,7 @@ import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/plugin/ui_manager.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
+import 'package:flutter_switch/flutter_switch.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:provider/provider.dart';
@@ -69,6 +70,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   final RxString _location = ''.obs;
   final RxString _id = ''.obs;
   final RxString _pw = ''.obs;
+  final RxBool _on1 = false.obs;
+  final RxBool _on2 = false.obs;
 
   final GlobalKey _childKey = GlobalKey();
   final Dio _dio = Dio()
@@ -91,27 +94,146 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            child: Image.asset(
-              'assets/logo.png',
-              width: 200,
-              height: 200,
-            ).marginOnly(left: 20),
+          _token.value.isNotEmpty
+              ? GestureDetector(
+                  child:
+                      Image.asset('assets/unlink.png', width: 20, height: 20),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          content: Row(
+                            children: [
+                              Icon(Icons.info),
+                              const SizedBox(width: 15),
+                              const Text("确定解除绑定"),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                canaelBind();
+                              },
+                              child: const Text("确定"),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(); // 關閉對話框
+                              },
+                              child: const Text("取消"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ).marginOnly(left: 50, top: 10)
+              : const SizedBox(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/logo.png',
+                width: 200,
+                height: 200,
+              ).marginOnly(left: 20),
+            ],
           ),
-          const SizedBox(height: 20),
-          Obx(
-            () => _qrcode.value.isNotEmpty
-                ? QrImageView(
-                    data: _qrcode.value,
-                    version: QrVersions.auto,
-                    size: 200.0,
-                  )
-                : const SizedBox(),
-          ).marginOnly(left: 50),
-          const SizedBox(height: 5),
+          Obx(() => SizedBox(height: _qrcode.value.isNotEmpty ? 5 : 0)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Obx(
+                () => _qrcode.value.isNotEmpty
+                    ? QrImageView(
+                        data: _qrcode.value,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                      )
+                    : const SizedBox(),
+              ),
+            ],
+          ),
+          Obx(() => SizedBox(height: _qrcode.value.isNotEmpty ? 5 : 0)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Obx(
+                () => _token.value.isNotEmpty
+                    ? Container(
+                        width: 200,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "无人值守",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black,
+                                decoration: TextDecoration.none,
+                              ),
+                            ).marginOnly(left: 10),
+                            SizedBox(
+                              width: 40,
+                              height: 20,
+                              child: FlutterSwitch(
+                                toggleSize: 20.0,
+                                value: _on1.value,
+                                onToggle: (bool value) {
+                                  _on1.value = value;
+                                },
+                              ),
+                            ).marginOnly(right: 10),
+                          ],
+                        ),
+                      )
+                    : const SizedBox(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Center(
+            child: Obx(
+              () => _token.value.isNotEmpty
+                  ? Container(
+                      width: 150,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Icon(
+                            Icons.punch_clock_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ).marginOnly(left: 10),
+                          Text(
+                            "关闭服务",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              decoration: TextDecoration.none,
+                            ),
+                          ).marginOnly(right: 10),
+                        ],
+                      ),
+                    )
+                  : const SizedBox(),
+            ),
+          ),
+          const SizedBox(height: 25),
           Obx(
             () => _token.value.isNotEmpty
-                ? Text("门店Id: ${_orgId.value}", style: style)
+                ? Text("联网状态: 就绪", style: style)
                 : const SizedBox(),
           ).marginOnly(left: 50),
           const SizedBox(height: 5),
@@ -129,7 +251,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           const SizedBox(height: 5),
           Obx(
             () => _token.value.isNotEmpty
-                ? Text("clientNo: ${_clientNo.value}", style: style)
+                ? Text("SN: ${_clientNo.value}", style: style)
                 : const SizedBox(),
           ).marginOnly(left: 50),
           const SizedBox(height: 5),
@@ -151,27 +273,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 : const SizedBox(),
           ).marginOnly(left: 50),
           const SizedBox(height: 35),
-          Obx(
-            () => _token.value.isNotEmpty
-                ? OutlinedButton(
-                    onPressed: () {
-                      canaelBind();
-                    },
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      "解绑",
-                      style: TextStyle(fontSize: 14, color: Colors.black),
-                    ),
-                  ).marginOnly(left: 50)
-                : const SizedBox(),
-          ),
-          const SizedBox(height: 5),
           //buildLeftPane(context),
           //if (!isIncomingOnly) const VerticalDivider(width: 1),
           //if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
