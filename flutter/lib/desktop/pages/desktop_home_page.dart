@@ -201,30 +201,40 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           Center(
             child: Obx(
               () => _token.value.isNotEmpty
-                  ? Container(
-                      width: 150,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Icon(
-                            Icons.punch_clock_outlined,
-                            color: Colors.white,
-                            size: 20,
-                          ).marginOnly(left: 10),
-                          Text(
-                            "关闭服务",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              decoration: TextDecoration.none,
-                            ),
-                          ).marginOnly(right: 10),
-                        ],
+                  ? GestureDetector(
+                      onTap: () {
+                        _on2.value = !_on2.value;
+                      },
+                      child: Container(
+                        width: 150,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color:
+                              _on2.value ? Colors.redAccent : Colors.blueAccent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: _on2.value
+                              ? MainAxisAlignment.spaceBetween
+                              : MainAxisAlignment.center,
+                          children: [
+                            _on2.value
+                                ? Icon(
+                                    Icons.punch_clock_outlined,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ).marginOnly(left: 10)
+                                : const SizedBox(),
+                            Text(
+                              _on2.value ? "关闭服务" : "开启服务",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                decoration: TextDecoration.none,
+                              ),
+                            ).marginOnly(right: 10),
+                          ],
+                        ),
                       ),
                     )
                   : const SizedBox(),
