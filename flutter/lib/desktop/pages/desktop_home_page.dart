@@ -187,6 +187,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 value: _on1.value,
                                 onToggle: (bool value) {
                                   _on1.value = value;
+                                  if (value) {
+                                    _on2.value = true;
+                                  }
                                 },
                               ),
                             ).marginOnly(right: 10),
@@ -203,6 +206,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               () => _token.value.isNotEmpty
                   ? GestureDetector(
                       onTap: () {
+                        if (_on1.value) return;
                         _on2.value = !_on2.value;
                       },
                       child: Container(
